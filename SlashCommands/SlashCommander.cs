@@ -133,6 +133,28 @@ namespace GlowBot.SlashCommands
             }
             await ctx.EditResponseAsync( new DiscordWebhookBuilder( ).WithContent( Program.Data!.RESPONSE_INSUFFICIENT_PERMISSIONS ) );
         }
+        [SlashCommand( "Preload", "Preloads a user into the database" )]
+        public async Task PreloadCommand( InteractionContext ctx, [Option( "User", "User change" )] DiscordUser user )
+        {
+            await ctx.CreateResponseAsync( InteractionResponseType.DeferredChannelMessageWithSource );
+
+            GuildData guildData = Database.GetDBGuild( ctx.Guild );
+
+            bool callerAllowed = ctx.Member.Roles.Any( x => x.Id == guildData.ServerRole_Admin ) || ctx.Member.IsOwner;
+
+            if ( callerAllowed )
+            {
+                DiscordMember tarMember = await ctx.Guild.GetMemberAsync( user.Id );
+                
+                GuildUserData tarUserData = Database.GetDBUser( tarMember );
+
+                Database.SaveDBUser( tarUserData );
+                
+                await ctx.EditResponseAsync( new DiscordWebhookBuilder( ).WithContent( $"Preloaded '{tarUserData.Nickname}' into the database." ) );
+                return;
+            }
+            await ctx.EditResponseAsync( new DiscordWebhookBuilder( ).WithContent( Program.Data!.RESPONSE_INSUFFICIENT_PERMISSIONS ) );
+        }
         [SlashCommand( "Nickname", "Gets your account status" )]
         public async Task NicknameCommand( InteractionContext ctx, [Option( "User", "User change" )] DiscordUser user, [Option("Nickanme", "New nickname")]string newNick )
         {

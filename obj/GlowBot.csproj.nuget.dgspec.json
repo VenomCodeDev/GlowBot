@@ -45,6 +45,10 @@
             "DSharpPlus.SlashCommands": {
               "target": "Package",
               "version": "[4.3.0-nightly-01142, )"
+            },
+            "System.Data.SQLite.Core": {
+              "target": "Package",
+              "version": "[1.0.116, )"
             }
           },
           "imports": [

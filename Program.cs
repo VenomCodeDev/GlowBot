@@ -84,10 +84,22 @@ internal class Program
         await _discord.ConnectAsync( );
 
         SlashCommandsExtension slashCmds = _discord.UseSlashCommands( );
-        slashCmds.RegisterCommands<SlashCommander>( Data.ID_GUILD_MASTERS );
+        slashCmds.RegisterCommands<SlashCommander>( Data!.GUILD_MASTER_ID );
 
-        await Task.Delay( -1 );
+        while ( !IsShutdown )
+        {
+            await Task.Delay( 3000 );
+        }
+        Log( $"Shutting down...", ConsoleColor.Yellow );
+        await _discord.DisconnectAsync( );
+        await Task.Delay( 250 );
+        _discord.Dispose( );
+        await Task.Delay( 1000 );
+        Log( $"Shutdown Complete!", ConsoleColor.Red );
     }
+
+    public static bool IsShutdown = false;
+    
     async private static Task OnVoiceStateUpdated( DiscordClient sender, VoiceStateUpdateEventArgs e )
     {
         GuildData guildData = Database.GetDBGuild( e.Guild );

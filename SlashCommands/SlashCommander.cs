@@ -116,7 +116,23 @@ namespace GlowBot.SlashCommands
             }
             await ctx.EditResponseAsync( new DiscordWebhookBuilder( ).WithContent( Program.Data!.RESPONSE_INSUFFICIENT_PERMISSIONS ) );
         }
-        
+        [SlashCommand( "Shutdown", "Terminates the bot" )]
+        public async Task ShutdownCommand( InteractionContext ctx )
+        {
+            await ctx.CreateResponseAsync( InteractionResponseType.DeferredChannelMessageWithSource );
+
+            GuildData guildData = Database.GetDBGuild( ctx.Guild );
+
+            bool callerAllowed = ctx.Member.Id == Program.Data!.USER_MASTER_ID;
+
+            if ( callerAllowed )
+            {
+                await ctx.EditResponseAsync( new DiscordWebhookBuilder( ).WithContent( $"Shutting down D:" ) );
+                Program.IsShutdown = true;
+                return;
+            }
+            await ctx.EditResponseAsync( new DiscordWebhookBuilder( ).WithContent( Program.Data!.RESPONSE_INSUFFICIENT_PERMISSIONS ) );
+        }
         [SlashCommand( "Nickname", "Gets your account status" )]
         public async Task NicknameCommand( InteractionContext ctx, [Option( "User", "User change" )] DiscordUser user, [Option("Nickanme", "New nickname")]string newNick )
         {

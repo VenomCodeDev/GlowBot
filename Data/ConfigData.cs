@@ -2,15 +2,11 @@
 {
     public class ConfigData
     {
-        public ulong ID_USER_MASTER { get; set; }
         public ulong ID_GUILD_MASTERS { get; set; }
 
-        public ulong ID_ROLE_PENDING { get; set; }
-        public ulong ID_ROLE_TRUSTED { get; set; }
-        
-        public ulong ID_ROLE_ADMIN { get; set; }
-
         public string RESPONSE_INSUFFICIENT_PERMISSIONS { get; set; }
+        public string RESPONSE_COMMAND_COOLDOWN { get; set; }
+        public string RESPONSE_INVALID_CHANNEL_TYPE { get; set; }
 
         public static ConfigData? Default
         {
@@ -19,6 +15,8 @@
                 return new ConfigData( )
                 {
                     RESPONSE_INSUFFICIENT_PERMISSIONS = "Uh, no.",
+                    RESPONSE_COMMAND_COOLDOWN = "You're in timeout! Git Gud",
+                    RESPONSE_INVALID_CHANNEL_TYPE = "Invalid channel type.",
                 };
             }
         }

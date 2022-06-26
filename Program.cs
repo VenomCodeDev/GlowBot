@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Data.SQLite;
+using System.Threading.Channels;
 using System.Xml;
 using System.Xml.Serialization;
 
 using DSharpPlus;
+using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using DSharpPlus.SlashCommands;
 
@@ -71,11 +73,13 @@ internal class Program
         {
             TokenType = TokenType.Bot,
             Token = botToken,
-            MinimumLogLevel = LogLevel.Error,
+            MinimumLogLevel = LogLevel.Warning,
+            Intents = DiscordIntents.AllUnprivileged | DiscordIntents.Guilds,
         };
         _discord = new DiscordClient( conf );
 
         _discord.GuildAvailable += OnGuildAvailable;
+        _discord.VoiceStateUpdated += OnVoiceStateUpdated;
         
         await _discord.ConnectAsync( );
 
@@ -84,9 +88,72 @@ internal class Program
 
         await Task.Delay( -1 );
     }
+    async private static Task OnVoiceStateUpdated( DiscordClient sender, VoiceStateUpdateEventArgs e )
+    {
+        GuildData guildData = Database.GetDBGuild( e.Guild );
+
+        if ( e.After?.Channel?.Id is not null )
+        {
+            GuildUserData userData = Database.GetDBUser( (DiscordMember)e.User );
+            if ( ( DateTime.Now - userData.JoinDate ).TotalSeconds <= 30 )
+            {
+                Database.SaveDBUser( userData );
+            }
+        }
+        
+        if ( e.After?.Channel?.Id is not null && e.After.Channel.Id == guildData.ServerVC_NewVC )
+        {
+            DiscordMember member = (DiscordMember)e.User;
+            GuildUserData userData = Database.GetDBUser( member );
+            
+            if ( ( DateTime.Now - userData.LastNewVCTime ).TotalSeconds < 120 )
+            {
+                await member.ModifyAsync( x => x.VoiceChannel = null );
+                return;
+            }
+
+            DiscordChannel channel = await e.Guild.CreateChannelAsync( $"{userData.Nickname}'s Hangout", ChannelType.Voice, position: 10 );
+            await member.ModifyAsync( x => x.VoiceChannel = channel );
+            DiscordOverwriteBuilder overwriteBuilder = new DiscordOverwriteBuilder( member )
+            {
+                Allowed = Permissions.ManageChannels,
+            };
+
+            List<DiscordOverwriteBuilder> permOverwrites = new List<DiscordOverwriteBuilder>
+            {
+                overwriteBuilder,
+            };
+
+            await channel.ModifyAsync( x => x.PermissionOverwrites = permOverwrites );
+
+            TempVoiceChannels.Add( channel.Id );
+            
+            userData.LastNewVCTime = DateTime.Now;
+            Database.SaveDBUser( userData );
+
+            Log( $"Created TMP-VC for {userData.Nickname}!", ConsoleColor.Cyan );
+        }
+        
+        if ( e.Before?.Channel?.Id is null )
+        {
+            return;
+        }
+
+        if ( TempVoiceChannels.Contains( e.Before.Channel.Id ) )
+        {
+            if ( e.Before.Channel.Users.Count <= 0 )
+            {
+                await e.Before.Channel.DeleteAsync( );
+                TempVoiceChannels.Remove( e.Before.Channel.Id );
+            }
+        }
+    }
+    
     private static async Task OnGuildAvailable( DiscordClient sender, GuildCreateEventArgs e )
     {
-        //Database.InitDBGuild( e.Guild.Id );
+        GuildData guildData = Database.GetDBGuild( e.Guild );
+        Log( $"Guild '{guildData.Nickname}' has come online!", ConsoleColor.Green );
+        Database.SaveDBGuild( guildData );
     }
 
     public static void Log( string msg, ConsoleColor color )
@@ -96,6 +163,8 @@ internal class Program
         Console.WriteLine( msg );
         Console.ForegroundColor = oldColor;
     }
+
+    public static List<ulong> TempVoiceChannels = new List<ulong>( );
 
     public static string BinPath { get; private set; }
     
